@@ -1,0 +1,254 @@
+import { useState } from 'react'
+
+interface VideoInfo {
+  video_id: string;
+  num_segments: number;
+  segments: TranscriptSegment[];
+}
+
+interface TranscriptSegment {
+  text: string;
+  start: number;
+  duration: number;
+}
+
+interface ChatMessage {
+  question: string;
+  answer: string;
+  timestamp: number;
+}
+
+export default function Home() {
+  const [videoUrl, setVideoUrl] = useState('')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isAsking, setIsAsking] = useState(false)
+  const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
+  const [currentQuestion, setCurrentQuestion] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  const validateYouTubeUrl = (url: string) => {
+    const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})$/;
+    return pattern.test(url);
+  };
+
+  const handleProcessVideo = async () => {
+    // Clear previous state
+    setError(null);
+    setVideoInfo(null);
+    setChatHistory([]);
+
+    // Validate URL
+    if (!validateYouTubeUrl(videoUrl)) {
+      setError('Please enter a valid YouTube URL');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const response = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: videoUrl }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to process video');
+      }
+
+      const data: VideoInfo = await response.json();
+      setVideoInfo(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process video');
+      console.error(err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleAskQuestion = async () => {
+    if (!currentQuestion.trim() || !videoInfo) return;
+
+    try {
+      setIsAsking(true);
+      setError(null);
+
+      const response = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: currentQuestion,
+          video_id: videoInfo.video_id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to get answer');
+      }
+
+      const data = await response.json();
+      
+      setChatHistory(prev => [...prev, {
+        question: currentQuestion,
+        answer: data.answer,
+        timestamp: Date.now(),
+      }]);
+      
+      setCurrentQuestion('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to get answer');
+      console.error(err);
+    } finally {
+      setIsAsking(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (currentQuestion.trim()) {
+        handleAskQuestion();
+      }
+    }
+  };
+
+  return (
+    <div className="min-h-screen">
+      {/* Header with Search */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold text-gray-900">YouTube QA</h1>
+            <div className="flex-1 flex gap-2">
+              <input
+                type="text"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleProcessVideo()}
+                placeholder="Enter YouTube URL..."
+                className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                disabled={isProcessing}
+              />
+              <button
+                onClick={handleProcessVideo}
+                disabled={isProcessing || !videoUrl.trim()}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Processing...
+                  </>
+                ) : (
+                  'Process'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 text-red-700 rounded-lg flex items-center gap-2">
+            <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            {error}
+          </div>
+        )}
+
+        {/* Transcript and Chat Panes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Transcript Pane */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold">Transcript</h2>
+            </div>
+            <div className="p-4 h-[600px] overflow-y-auto">
+              {videoInfo?.segments ? (
+                <div className="space-y-4">
+                  {videoInfo.segments.map((segment, index) => (
+                    <div key={index} className="flex gap-4 hover:bg-gray-50 p-2 rounded">
+                      <span className="text-sm text-gray-500 whitespace-nowrap">
+                        {new Date(segment.start * 1000).toISOString().substr(11, 8)}
+                      </span>
+                      <p className="text-gray-700">{segment.text}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  No transcript available
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Chat Pane */}
+          <div className="bg-white rounded-lg shadow flex flex-col">
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold">Ask Questions</h2>
+            </div>
+            <div className="flex-1 p-4 overflow-y-auto">
+              {chatHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {chatHistory.map((message, index) => (
+                    <div key={index} className="flex flex-col">
+                      <div className="bg-blue-50 rounded-lg p-3 max-w-[80%]">
+                        <p className="text-gray-700">{message.question}</p>
+                      </div>
+                      <div className="mt-2 bg-gray-50 rounded-lg p-3 max-w-[80%] ml-auto">
+                        <p className="text-gray-700 whitespace-pre-wrap">{message.answer}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  Ask questions about the video
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t">
+              <div className="flex gap-2">
+                <textarea
+                  value={currentQuestion}
+                  onChange={(e) => setCurrentQuestion(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask a question about the video..."
+                  className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
+                  rows={1}
+                  disabled={!videoInfo || isAsking}
+                />
+                <button
+                  onClick={handleAskQuestion}
+                  disabled={!currentQuestion.trim() || !videoInfo || isAsking}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isAsking ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Thinking...
+                    </>
+                  ) : (
+                    'Send'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+} 

@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "ytqa"
+version = "0.1.0"
+description = "YouTube video question-answering system"
+authors = ["Maruti Agarwal <marutiagarwal@gmail.com>"]
+readme = "README.md"
+packages = [{include = "ytqa"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+youtube-transcript-api = "^0.6.2"
+yt-dlp = "^2024.3.10"
+openai = "^1.14.0"
+pydantic = "^2.6.3"
+faiss-cpu = "^1.8.0"
+numpy = "^1.26.4"
+python-dotenv = "^1.0.1"
+pytest = "^8.3.5"
+mock = "^5.2.0"
+pytest-cov = "^6.1.1"
+fastapi = "^0.115.12"
+uvicorn = "^0.34.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.1.1"
+black = "^24.2.0"
+isort = "^5.13.2"
+flake8 = "^7.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+ytqa = "ytqa.cli:main" 
