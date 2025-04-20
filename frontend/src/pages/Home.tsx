@@ -12,6 +12,12 @@ interface TranscriptSegment {
   duration: number;
 }
 
+interface TopicBlock {
+  title: string;
+  start: number;
+  segments: TranscriptSegment[];
+}
+
 interface ChatMessage {
   question: string;
   answer: string;
@@ -23,6 +29,7 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isAsking, setIsAsking] = useState(false)
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null)
+  const [topics, setTopics] = useState<TopicBlock[]>([])
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([])
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +43,7 @@ export default function Home() {
     // Clear previous state
     setError(null);
     setVideoInfo(null);
+    setTopics([]);
     setChatHistory([]);
 
     // Validate URL
@@ -59,12 +67,26 @@ export default function Home() {
 
       const data: VideoInfo = await response.json();
       setVideoInfo(data);
+
+      // Fetch topics
+      const topicsResponse = await fetch(`/api/topics/${data.video_id}`);
+      if (!topicsResponse.ok) {
+        throw new Error('Failed to fetch video topics');
+      }
+      const topicsData: TopicBlock[] = await topicsResponse.json();
+      setTopics(topicsData);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process video');
       console.error(err);
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const handleJumpToTime = (seconds: number) => {
+    if (!videoInfo?.video_id) return;
+    window.open(`https://youtube.com/watch?v=${videoInfo.video_id}&t=${Math.floor(seconds)}`, '_blank');
   };
 
   const handleAskQuestion = async () => {
@@ -164,8 +186,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* Transcript and Chat Panes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Three-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Transcript Pane */}
           <div className="bg-white rounded-lg shadow">
             <div className="p-4 border-b">
@@ -175,8 +197,12 @@ export default function Home() {
               {videoInfo?.segments ? (
                 <div className="space-y-4">
                   {videoInfo.segments.map((segment, index) => (
-                    <div key={index} className="flex gap-4 hover:bg-gray-50 p-2 rounded">
-                      <span className="text-sm text-gray-500 whitespace-nowrap">
+                    <div 
+                      key={index} 
+                      className="flex gap-4 hover:bg-gray-50 p-2 rounded cursor-pointer"
+                      onClick={() => handleJumpToTime(segment.start)}
+                    >
+                      <span className="text-sm text-gray-500 whitespace-nowrap hover:text-blue-600">
                         {new Date(segment.start * 1000).toISOString().substr(11, 8)}
                       </span>
                       <p className="text-gray-700">{segment.text}</p>
@@ -186,6 +212,41 @@ export default function Home() {
               ) : (
                 <div className="text-gray-500 text-center py-8">
                   No transcript available
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Topics Pane */}
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold">Topics</h2>
+            </div>
+            <div className="p-4 h-[600px] overflow-y-auto">
+              {topics.length > 0 ? (
+                <div className="space-y-6">
+                  {topics.map((topic, index) => (
+                    <div key={index} className="border-b pb-4 last:border-b-0">
+                      <div 
+                        className="flex items-start gap-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                        onClick={() => handleJumpToTime(topic.start)}
+                      >
+                        <span className="text-sm text-blue-600 whitespace-nowrap">
+                          {new Date(topic.start * 1000).toISOString().substr(11, 8)}
+                        </span>
+                        <div>
+                          <h3 className="font-medium text-gray-900">{topic.title}</h3>
+                          <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                            {topic.segments[0]?.text}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  {isProcessing ? 'Analyzing topics...' : 'No topics available'}
                 </div>
               )}
             </div>
@@ -221,7 +282,7 @@ export default function Home() {
                 <textarea
                   value={currentQuestion}
                   onChange={(e) => setCurrentQuestion(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleAskQuestion()}
                   placeholder="Ask a question about the video..."
                   className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={1}

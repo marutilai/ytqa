@@ -7,8 +7,10 @@ from urllib.parse import urlparse, parse_qs
 from .adapters.transcripts.factory import TranscriptFactory
 from .adapters.embeddings.openai import OpenAIEmbeddings
 from .adapters.vectorstores.faiss_store import FAISSStore
-from .core.models import Segment
+from .core.models import Segment, TopicBlock
 from .core.qa import answer
+from .core.topic_segmentation import topics_from_segments
+from .config import TOPIC_MODEL, VECTOR_DIMENSION
 
 
 class Orchestrator:
@@ -21,8 +23,11 @@ class Orchestrator:
         # Initialize embeddings provider
         self.embeddings = OpenAIEmbeddings(api_key=openai_api_key)
 
-        # Initialize vector store (3072 is the dimension for text-embedding-3-large)
-        self.vector_store = FAISSStore(dimension=3072)
+        # Initialize vector store
+        self.vector_store = FAISSStore(dimension=VECTOR_DIMENSION)
+
+        # Store config for topic analysis
+        self.cfg = type("Config", (), {"topic_model": TOPIC_MODEL})()
 
     def _extract_video_id(self, url: str) -> str:
         """Extract video ID from YouTube URL."""
@@ -34,6 +39,47 @@ class Orchestrator:
             return parsed.path[1:]
         raise ValueError(f"Invalid YouTube URL: {url}")
 
+    def _get_topics_cache_path(self, video_id: str) -> str:
+        """Get path for cached topics file."""
+        return os.path.join(
+            self.transcript_factory.cache_dir, f"{video_id}_topics.json"
+        )
+
+    def _load_cached_topics(self, video_id: str) -> Optional[List[TopicBlock]]:
+        """Load cached topics if they exist."""
+        cache_path = self._get_topics_cache_path(video_id)
+        if os.path.exists(cache_path):
+            print(f"Loading cached topics from {cache_path}")
+            with open(cache_path, "r") as f:
+                topics_data = json.load(f)
+                return [
+                    TopicBlock(
+                        title=t["title"],
+                        start=t["start"],
+                        segments=[Segment(**s) for s in t["segments"]],
+                    )
+                    for t in topics_data
+                ]
+        return None
+
+    def _save_topics_cache(self, video_id: str, topics: List[TopicBlock]):
+        """Save topics to cache."""
+        cache_path = self._get_topics_cache_path(video_id)
+        topics_data = [
+            {
+                "title": t.title,
+                "start": t.start,
+                "segments": [
+                    {"text": s.text, "start": s.start, "duration": s.duration}
+                    for s in t.segments
+                ],
+            }
+            for t in topics
+        ]
+        with open(cache_path, "w") as f:
+            json.dump(topics_data, f)
+        print(f"Cached topics to {cache_path}")
+
     def process_video(self, video_url: str) -> Dict[str, Any]:
         """Process a video: get transcript, create embeddings, and store in vector store."""
         try:
@@ -44,50 +90,116 @@ class Orchestrator:
 
             # Get transcript (TranscriptFactory handles merging and caching)
             print(f"Getting transcript for video {video_id}")
-            chunks = self.transcript_factory.get_transcript(video_id)
-            if not chunks:
+            segments = self.transcript_factory.get_transcript(video_id)
+            if not segments:
                 raise ValueError("Failed to get transcript")
 
-            # Create embeddings for chunks
-            print(f"Creating embeddings for {len(chunks)} chunks")
-            embeddings = self.embeddings.get_embeddings(
-                [chunk.text for chunk in chunks]
-            )
+            # Create embeddings for segments
+            print(f"Creating embeddings for {len(segments)} chunks")
+            embeddings = self.embeddings.get_embeddings([s.text for s in segments])
 
             # Prepare metadata for vector store
             metadata = [
                 {
                     "video_id": video_id,
-                    "text": chunk.text,
-                    "start": chunk.start,
-                    "duration": chunk.duration,
+                    "text": s.text,
+                    "start": s.start,
+                    "duration": s.duration,
                     "chunk_index": i,
                 }
-                for i, chunk in enumerate(chunks)
+                for i, s in enumerate(segments)
             ]
 
             # Add to vector store (FAISSStore will handle caching)
             print(f"Adding vectors to store for video {video_id}")
             self.vector_store.add_vectors(np.array(embeddings), metadata)
 
-            # Return the first 5 segments for reference
-            segments = [
-                {
-                    "text": chunk.text,
-                    "start": chunk.start,
-                    "duration": chunk.duration,
-                }
-                for chunk in chunks[:5]
-            ]
+            # Analyze topics in the background
+            self.analyze_topics(video_id)
 
             return {
                 "video_id": video_id,
-                "num_segments": len(chunks),
-                "segments": segments,
+                "num_segments": len(segments),
+                "segments": [
+                    {"text": s.text, "start": s.start, "duration": s.duration}
+                    for s in segments
+                ],
             }
 
         except Exception as e:
             print(f"Error processing video: {str(e)}")
+            raise
+
+    def analyze_topics(self, video_id: str) -> List[TopicBlock]:
+        """Analyze topics in the video transcript."""
+        try:
+            print(f"\n=== Starting topic analysis for video {video_id} ===")
+
+            # Check cache first
+            print("Checking for cached topics...")
+            cache_path = self._get_topics_cache_path(video_id)
+            print(f"Cache path: {cache_path}")
+
+            cached_topics = self._load_cached_topics(video_id)
+            if cached_topics:
+                print("\nLoaded topics from cache:")
+                for topic in cached_topics:
+                    print(f"- {topic.title} (starts at {topic.start:.1f}s)")
+                return cached_topics
+
+            # Get transcript
+            print("\nNo cached topics found. Getting transcript...")
+            segments = self.transcript_factory.get_transcript(video_id)
+            if not segments:
+                print("Error: No transcript found")
+                raise ValueError("No transcript found")
+            print(f"Got {len(segments)} segments from transcript")
+
+            # Extract topics
+            print(f"\nAnalyzing topics for video {video_id}")
+            try:
+                print(f"Using topic model: {self.cfg.topic_model}")
+                topics = topics_from_segments(segments, self.cfg)
+
+                if not topics:
+                    print("Warning: topics_from_segments returned empty list")
+                    raise ValueError("No topics were extracted")
+
+                # Print extracted topics
+                print("\nExtracted topics:")
+                for topic in topics:
+                    print(f"- {topic.title} (starts at {topic.start:.1f}s)")
+
+                # Cache the results
+                print("\nSaving topics to cache...")
+                self._save_topics_cache(video_id, topics)
+                print("Topics saved to cache for future use")
+
+                return topics
+
+            except Exception as e:
+                print(f"\nFailed to extract topics: {str(e)}")
+                print("Stack trace:", e.__class__.__name__)
+                import traceback
+
+                print(traceback.format_exc())
+
+                # Return a single topic covering the entire video as fallback
+                print("\nCreating fallback topic...")
+                fallback_topic = TopicBlock(
+                    title="Full Video Content",
+                    start=segments[0].start,
+                    segments=segments,
+                )
+                print("Using fallback topic: Full Video Content")
+                return [fallback_topic]
+
+        except Exception as e:
+            print(f"Error in analyze_topics: {str(e)}")
+            print("Stack trace:", e.__class__.__name__)
+            import traceback
+
+            print(traceback.format_exc())
             raise
 
     def search_transcript(self, query: str, k: int = 5) -> List[Dict[str, Any]]:

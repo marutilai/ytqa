@@ -30,3 +30,11 @@ class Answer(BaseModel):
     answer: str
     context: List[Chunk]
     confidence: Optional[float] = None
+
+
+class TopicBlock(BaseModel):
+    """A block of transcript segments representing a single topic."""
+
+    title: str
+    start: float
+    segments: List[Segment]

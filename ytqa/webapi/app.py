@@ -7,6 +7,7 @@ import logging
 from dotenv import load_dotenv
 
 from ..orchestrator import Orchestrator
+from ..core.models import Segment, TopicBlock, Answer
 
 
 # Load environment variables
@@ -55,12 +56,6 @@ class SearchRequest(BaseModel):
     k: Optional[int] = 5
 
 
-class Segment(BaseModel):
-    text: str
-    start: float
-    duration: float
-
-
 class ProcessResponse(BaseModel):
     video_id: str
     num_segments: int
@@ -81,6 +76,21 @@ async def process_video(request: ProcessRequest):
         return result
     except Exception as e:
         logger.error(f"Error processing video: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/topics/{video_id}", response_model=List[TopicBlock])
+async def get_video_topics(video_id: str):
+    """Get topics for a specific video."""
+    try:
+        logger.info(f"Getting topics for video: {video_id}")
+        topics = orchestrator.analyze_topics(video_id)
+        if not topics:
+            raise HTTPException(status_code=404, detail="Topics not found")
+        logger.info(f"Successfully retrieved {len(topics)} topics")
+        return topics
+    except Exception as e:
+        logger.error(f"Error getting topics: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
