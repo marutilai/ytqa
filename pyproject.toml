@@ -5,6 +5,7 @@ description = "YouTube video question-answering system"
 authors = ["Maruti Agarwal <marutiagarwal@gmail.com>"]
 readme = "README.md"
 packages = [{include = "ytqa"}]
+package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"

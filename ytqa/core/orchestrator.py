@@ -4,13 +4,13 @@ import numpy as np
 from typing import List, Dict, Any, Optional
 from urllib.parse import urlparse, parse_qs
 
-from .adapters.transcripts.factory import TranscriptFactory
-from .adapters.embeddings.openai import OpenAIEmbeddings
-from .adapters.vectorstores.faiss_store import FAISSStore
-from .core.models import Segment, TopicBlock
-from .core.qa import answer
-from .core.topic_segmentation import topics_from_segments
-from .config import TOPIC_MODEL, VECTOR_DIMENSION
+from ..adapters.transcripts.factory import TranscriptFactory
+from ..adapters.embeddings.openai import OpenAIEmbeddings
+from ..adapters.vectorstores.faiss_store import FAISSVectorStore
+from .models import Segment, TopicBlock
+from .qa import answer
+from .topic_segmentation import topics_from_segments
+from ..config import TOPIC_MODEL, VECTOR_DIMENSION
 
 
 class Orchestrator:
@@ -24,7 +24,7 @@ class Orchestrator:
         self.embeddings = OpenAIEmbeddings(api_key=openai_api_key)
 
         # Initialize vector store
-        self.vector_store = FAISSStore(dimension=VECTOR_DIMENSION)
+        self.vector_store = FAISSVectorStore(dimension=VECTOR_DIMENSION)
 
         # Store config for topic analysis
         self.cfg = type("Config", (), {"topic_model": TOPIC_MODEL})()
