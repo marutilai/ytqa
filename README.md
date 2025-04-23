@@ -1,59 +1,46 @@
-# YTQA - YouTube Video Question Answering
+# YouTube QA
 
-A Python library for question-answering on YouTube videos using transcripts and AI.
+AI-powered application that processes YouTube videos to provide transcripts, extract topics, and answer questions about the content.
 
-## Features
+## Prerequisites
 
-- Automatic transcript retrieval from YouTube videos
-- Fallback to Whisper transcription when captions aren't available
-- Vector-based semantic search for relevant context
-- AI-powered question answering using retrieved context
-- CLI interface for easy interaction
+- Docker and Docker Compose
+- OpenAI API key
 
-## Installation
+## Quick Start
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/ytqa.git
-cd ytqa
+1. **Setup**
+   ```bash
+   # Clone and enter directory
+   git clone https://github.com/marutilai/ytqa.git
+   cd ytqa
 
-# Install with Poetry
-poetry install
-```
+   # Create and configure environment
+   cp .env.example .env
+   # Add your OPENAI_API_KEY to .env
+   ```
 
-## Configuration
+2. **Development**
+   ```bash
+   # Run locally
+   docker compose up --build
+   # Visit http://localhost:3000
+   ```
 
-The following environment variables are required:
+3. **Production**
+   ```bash
+   # Deploy with SSL
+   docker compose -f docker-compose.prod.yml up --build -d
+   
+   # Get SSL certificate
+   docker compose -f docker-compose.prod.yml run --rm certbot certonly \
+     --webroot --webroot-path /var/www/certbot/ \
+     -d your-domain.com
+   ```
 
-```bash
-OPENAI_API_KEY=your_openai_api_key  # Required for Whisper and embeddings
-```
+## Architecture
 
-You can also create a `.env` file in the project root.
+- Frontend: React + Vite + TypeScript
+- Backend: Python + FastAPI
+- AI: OpenAI API for embeddings and topic extraction
 
-## Usage
-
-Basic usage from the command line:
-
-```bash
-# Fetch and cache a video transcript
-ytqa fetch "https://www.youtube.com/watch?v=VIDEO_ID"
-
-# Ask a question about the video
-ytqa ask VIDEO_ID "When does X happen in the video?"
-```
-
-## Development
-
-```bash
-# Run tests
-poetry run pytest
-
-# Format code
-poetry run black ytqa tests
-poetry run isort ytqa tests
-```
-
-## License
-
-MIT License - see LICENSE file for details. 
