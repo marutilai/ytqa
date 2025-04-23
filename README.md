@@ -16,7 +16,7 @@ AI-powered application that processes YouTube videos to provide transcripts, ext
    cd ytqa
 
    # Create and configure environment
-   cp .env.example .env
+   cp .env.sample .env
    # Add your OPENAI_API_KEY to .env
    ```
 

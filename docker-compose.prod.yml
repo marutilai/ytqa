@@ -4,22 +4,37 @@ services:
   api:
     build:
       context: .
-      dockerfile: docker/backend.dockerfile
-    restart: always
+      dockerfile: docker/backend.prod.dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ytqa_cache:/tmp/ytqa_cache
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - PYTHONPATH=/app
       - YTQA_CACHE_DIR=/tmp/ytqa_cache
-    volumes:
-      - ytqa_cache:/tmp/ytqa_cache
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   frontend:
     build:
       context: .
       dockerfile: docker/frontend.prod.dockerfile
-    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - VITE_API_URL=https://api.yourdomain.com
     depends_on:
       - api
+    volumes:
+      - ./ssl:/etc/nginx/ssl
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    restart: always
 
   nginx:
     image: nginx:alpine
@@ -37,11 +52,16 @@ services:
 
   certbot:
     image: certbot/certbot
-    restart: unless-stopped
     volumes:
-      - ./certbot/conf:/etc/letsencrypt
+      - ./ssl:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    command: renew
+    depends_on:
+      - frontend
 
 volumes:
-  ytqa_cache: 
+  ytqa_cache:
+
+networks:
+  default:
+    name: ytqa_network 
