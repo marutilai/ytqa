@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "ytqa"
 version = "0.1.0"
-description = "YouTube video question-answering system"
+description = "YouTube video question answering system"
 authors = ["Maruti Agarwal <marutiagarwal@gmail.com>"]
 readme = "README.md"
 packages = [{include = "ytqa"}]

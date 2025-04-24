@@ -2,7 +2,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: docker/backend.dockerfile
+      dockerfile: docker/backend.dev.dockerfile
     ports:
       - "8000:8000"
     volumes:
@@ -19,20 +19,16 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: docker/frontend.dockerfile
+      dockerfile: docker/frontend.dev.dockerfile
     ports:
       - "3000:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      # Set the proxy target for the Vite dev server inside the container
-      - VITE_API_PROXY_TARGET=http://api:8000
-      # Ensure Node runs in development mode if needed by Vite plugins/config
-      - NODE_ENV=development      
+      - VITE_API_URL=http://api:8000
     depends_on:
       - api
-    container_name: ytqa_frontend
 
 volumes:
   ytqa_cache: 
