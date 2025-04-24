@@ -92,13 +92,15 @@ export default function Home() {
   const handleAskQuestion = async () => {
     if (!currentQuestion.trim() || !videoInfo) return;
 
-    try {
-      setIsAsking(true);
-      setError(null);
+    setIsAsking(true);
+    setError(null);
 
-      const response = await fetch('/api/search', {
+    try {
+      const response = await fetch('http://localhost:8000/search', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           query: currentQuestion,
           video_id: videoInfo.video_id,
@@ -106,17 +108,19 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to get answer');
+        throw new Error('Failed to get answer');
       }
 
       const data = await response.json();
       
-      setChatHistory(prev => [...prev, {
-        question: currentQuestion,
-        answer: data.answer,
-        timestamp: Date.now(),
-      }]);
+      setChatHistory([
+        ...chatHistory,
+        {
+          question: currentQuestion,
+          answer: data.answer,
+          timestamp: Date.now(),
+        },
+      ]);
       
       setCurrentQuestion('');
     } catch (err) {
@@ -124,15 +128,6 @@ export default function Home() {
       console.error(err);
     } finally {
       setIsAsking(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (currentQuestion.trim()) {
-        handleAskQuestion();
-      }
     }
   };
 

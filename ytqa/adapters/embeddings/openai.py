@@ -5,7 +5,7 @@ import numpy as np
 
 import openai
 from ...config import CACHE_DIR
-from ytqa.adapters.vectorstores.faiss_store import FAISSStore
+from ytqa.adapters.vectorstores.faiss_store import FAISSVectorStore
 
 
 class OpenAIEmbeddings:

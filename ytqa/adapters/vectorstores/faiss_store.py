@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 from ...config import CACHE_DIR
 
 
-class FAISSStore:
+class FAISSVectorStore:
     """FAISS vector store with caching."""
 
     def __init__(self, dimension: int, cache_dir: str = None):

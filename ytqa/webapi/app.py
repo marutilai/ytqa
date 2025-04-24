@@ -6,7 +6,7 @@ from pydantic import BaseModel, HttpUrl
 import logging
 from dotenv import load_dotenv
 
-from ..orchestrator import Orchestrator
+from ..core.orchestrator import Orchestrator
 from ..core.models import Segment, TopicBlock, Answer
 
 
