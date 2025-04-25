@@ -228,7 +228,11 @@ class Orchestrator:
         return video_segments
 
     def answer_question(
-        self, query: str, video_id: Optional[str] = None, k: int = 5
+        self,
+        query: str,
+        video_id: Optional[str] = None,
+        k: int = 5,
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> str:
         """
         Answer a question about a video's content.
@@ -237,6 +241,7 @@ class Orchestrator:
             query: The question to answer
             video_id: Optional video ID to restrict search to
             k: Number of chunks to retrieve for context
+            conversation_history: Optional list of previous messages in the conversation
 
         Returns:
             str: Generated answer with relevant timestamps
@@ -249,4 +254,4 @@ class Orchestrator:
             chunks = [chunk for chunk in chunks if chunk["video_id"] == video_id]
 
         # Generate answer using the QA module
-        return answer(query, chunks)
+        return answer(query, chunks, conversation_history=conversation_history)

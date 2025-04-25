@@ -50,10 +50,20 @@ class ProcessRequest(BaseModel):
     url: HttpUrl
 
 
+class Message(BaseModel):
+    """A chat message with its role and content."""
+
+    role: str  # 'user' or 'assistant'
+    content: str
+
+
 class SearchRequest(BaseModel):
+    """Request model for transcript search."""
+
     query: str
     video_id: Optional[str] = None
-    k: Optional[int] = 5
+    k: int = 5
+    conversation_history: Optional[List[Message]] = None
 
 
 class ProcessResponse(BaseModel):
@@ -63,6 +73,8 @@ class ProcessResponse(BaseModel):
 
 
 class SearchResponse(BaseModel):
+    """Response model for transcript search."""
+
     answer: str
 
 
@@ -102,8 +114,14 @@ async def search_transcript(request: SearchRequest):
         if request.video_id:
             logger.info(f"Restricting search to video: {request.video_id}")
 
+        history = request.conversation_history or []
+        logger.info(f"Conversation history length: {len(history)}")
+
         answer = orchestrator.answer_question(
-            request.query, video_id=request.video_id, k=request.k
+            request.query,
+            video_id=request.video_id,
+            k=request.k,
+            conversation_history=history,
         )
         logger.info("Successfully generated answer")
         return {"answer": answer}
