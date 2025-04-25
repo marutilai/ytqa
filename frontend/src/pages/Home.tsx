@@ -97,6 +97,12 @@ export default function Home() {
     setError(null);
 
     try {
+      // Convert chat history to the format expected by the API
+      const formattedHistory = chatHistory.flatMap(msg => [
+        { role: 'user', content: msg.question },
+        { role: 'assistant', content: msg.answer }
+      ]);
+
       const response = await fetch('http://localhost:8000/search', {
         method: 'POST',
         headers: {
@@ -105,6 +111,7 @@ export default function Home() {
         body: JSON.stringify({
           query: currentQuestion,
           video_id: videoInfo.video_id,
+          conversation_history: formattedHistory
         }),
       });
 

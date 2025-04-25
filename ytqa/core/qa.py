@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import openai
 from dotenv import load_dotenv
 import os
@@ -22,7 +22,10 @@ def format_chunks_for_context(chunks: List[Dict[str, Any]]) -> str:
 
 
 def answer(
-    query: str, chunks: List[Dict[str, Any]], model: str = "gpt-3.5-turbo"
+    query: str,
+    chunks: List[Dict[str, Any]],
+    model: str = "gpt-3.5-turbo",
+    conversation_history: Optional[List[Dict[str, str]]] = None,
 ) -> str:
     """
     Generate an answer to a user query based on retrieved transcript chunks.
@@ -31,6 +34,7 @@ def answer(
         query: The user's question
         chunks: List of relevant transcript chunks from FAISS store
         model: OpenAI model to use for completion
+        conversation_history: Optional list of previous messages in the conversation
 
     Returns:
         str: Generated answer with relevant timestamps
@@ -48,24 +52,32 @@ When answering questions:
 2. If you're not sure about something, say so
 3. Include relevant timestamps [MM:SS] when referencing specific parts
 4. Keep your answers concise and to the point
-5. If the question can't be answered with the given context, say so"""
+5. If the question can't be answered with the given context, say so
+6. You can refer to previous questions and answers in the conversation when relevant"""
 
+    # Prepare messages list with system prompt
+    messages = [{"role": "system", "content": system_prompt}]
+
+    # Add conversation history if available
+    if conversation_history:
+        messages.extend(conversation_history)
+
+    # Add context and current question
     user_prompt = f"""Here are some relevant parts of the video transcript:
 
 {context}
 
 Question: {query}
 
-Please provide a helpful answer based on the transcript above."""
+Please provide a helpful answer based on the transcript above and our previous conversation if relevant."""
+
+    messages.append({"role": "user", "content": user_prompt})
 
     # Make the API call
     try:
         response = openai.chat.completions.create(
             model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
+            messages=messages,
             temperature=0.7,
             max_tokens=500,
         )
