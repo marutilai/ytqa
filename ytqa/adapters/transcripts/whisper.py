@@ -169,11 +169,11 @@ class WhisperTranscriptProvider(TranscriptProvider):
             # First download the video
             video_path = os.path.join(temp_dir, "video")
             ydl_opts = {
-                "format": "bestaudio[ext=m4a]",  # Specifically try m4a audio
+                "format": "worstaudio/worst",  # Try worst quality to avoid format restrictions
                 "outtmpl": video_path,
                 "quiet": False,
                 "no_warnings": False,
-                "verbose": True,  # Add verbose output
+                "verbose": True,
                 "ignoreerrors": True,
                 "extract_audio": True,
                 "audio_format": "mp3",
@@ -182,12 +182,18 @@ class WhisperTranscriptProvider(TranscriptProvider):
                     {
                         "key": "FFmpegExtractAudio",
                         "preferredcodec": "mp3",
-                        "preferredquality": "192",
+                        "preferredquality": "64",  # Lower quality for better compatibility
                     }
                 ],
-                # Add more debug options
-                "debug_printtraffic": True,
+                # Add more options to bypass restrictions
                 "nocheckcertificate": True,
+                "no_check_formats": True,
+                "extractor_args": {
+                    "youtube": {
+                        "player_client": ["android"],
+                        "player_skip": ["webpage", "configs", "js"],
+                    }
+                },
             }
 
             try:
