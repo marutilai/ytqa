@@ -26,3 +26,12 @@ MIN_TOPIC_DURATION = 60 * 2  # Minimum duration for a topic in seconds
 # Cache settings
 CACHE_DIR = os.path.join(tempfile.gettempdir(), "ytqa_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
+
+# Cookies settings
+# Check environment variable first, then try Docker path, finally local path
+COOKIES_PATH = os.getenv(
+    "YTQA_COOKIES_PATH",
+    "/app/ytqa/cookies.txt"
+    if os.path.exists("/app/ytqa/cookies.txt")
+    else "cookies.txt",
+)

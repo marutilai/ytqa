@@ -11,7 +11,12 @@ import yt_dlp
 
 from .base import TranscriptProvider
 from ...core.models import Segment
-from ...config import TRANSCRIPT_CHUNK_DURATION, TRANSCRIPT_MAX_FILE_SIZE, CACHE_DIR
+from ...config import (
+    TRANSCRIPT_CHUNK_DURATION,
+    TRANSCRIPT_MAX_FILE_SIZE,
+    CACHE_DIR,
+    COOKIES_PATH,
+)
 
 
 class WhisperTranscriptProvider(TranscriptProvider):
@@ -169,17 +174,10 @@ class WhisperTranscriptProvider(TranscriptProvider):
             # First download the video
             video_path = os.path.join(temp_dir, "video")
 
-            # Get path relative to this module's location
-            module_dir = os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
-            cookies_path = os.path.join(module_dir, "cookies.txt")
-            print(f"Module directory: {module_dir}")
-            print(f"Using cookies from: {cookies_path}")
-            if not os.path.exists(cookies_path):
-                print(f"Warning: Cookies file not found at {cookies_path}")
-                print(f"Current working directory: {os.getcwd()}")
-                print(f"Directory contents: {os.listdir(module_dir)}")
+            # Use cookies path from config
+            print(f"Using cookies from: {COOKIES_PATH}")
+            if not os.path.exists(COOKIES_PATH):
+                print(f"Warning: Cookies file not found at {COOKIES_PATH}")
 
             ydl_opts = {
                 "format": "bestaudio/best",  # Try best audio format
@@ -190,7 +188,7 @@ class WhisperTranscriptProvider(TranscriptProvider):
                 "ignoreerrors": True,
                 "extract_audio": True,
                 "audio_format": "mp3",
-                "cookiefile": cookies_path,  # Use path relative to module
+                "cookiefile": COOKIES_PATH,
                 "postprocessors": [
                     {
                         "key": "FFmpegExtractAudio",
