@@ -169,14 +169,15 @@ class WhisperTranscriptProvider(TranscriptProvider):
             # First download the video
             video_path = os.path.join(temp_dir, "video")
             ydl_opts = {
-                "format": "bestaudio/best",  # Try best audio, fall back to best
+                "format": "bestaudio[ext=m4a]",  # Specifically try m4a audio
                 "outtmpl": video_path,
                 "quiet": False,
                 "no_warnings": False,
+                "verbose": True,  # Add verbose output
                 "ignoreerrors": True,
                 "extract_audio": True,
                 "audio_format": "mp3",
-                "cookiefile": "cookies.txt",  # Use cookies.txt file
+                "cookiefile": "cookies.txt",
                 "postprocessors": [
                     {
                         "key": "FFmpegExtractAudio",
@@ -184,6 +185,9 @@ class WhisperTranscriptProvider(TranscriptProvider):
                         "preferredquality": "192",
                     }
                 ],
+                # Add more debug options
+                "debug_printtraffic": True,
+                "nocheckcertificate": True,
             }
 
             try:
