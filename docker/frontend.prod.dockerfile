@@ -1,4 +1,4 @@
-# Build stage
+# Use Node.js LTS version
 FROM node:20-slim as builder
 
 # Set working directory
@@ -13,20 +13,27 @@ RUN npm install
 # Copy frontend source code
 COPY frontend/ ./
 
+# Copy cookies file for API requests
+COPY cookies.txt /app/cookies.txt
+
 # Build the application
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine
+FROM node:20-slim
+
+WORKDIR /app
 
 # Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/cookies.txt ./cookies.txt
 
-# Copy nginx config
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+# Install only production dependencies
+RUN npm install --production
 
-# Expose port 80
-EXPOSE 80
+# Expose port 3000
+EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"] 
+# Start the production server
+CMD ["npm", "run", "start"] 

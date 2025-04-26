@@ -13,6 +13,9 @@ RUN npm install
 # Copy frontend source code
 COPY frontend/ ./
 
+# Copy cookies file for API requests
+COPY cookies.txt /app/cookies.txt
+
 # Expose port 3000
 EXPOSE 3000
 
