@@ -26,8 +26,11 @@ RUN poetry install --without dev --no-interaction --no-ansi
 # Copy application code
 COPY . .
 
-# Copy cookies file
-COPY cookies.txt /app/cookies.txt
+# Create ytqa directory if it doesn't exist
+RUN mkdir -p /app/ytqa
+
+# Copy cookies file to the correct location
+COPY cookies.txt /app/ytqa/cookies.txt
 
 # Create cache directory
 RUN mkdir -p /tmp/ytqa_cache
