@@ -168,12 +168,18 @@ class WhisperTranscriptProvider(TranscriptProvider):
         with tempfile.TemporaryDirectory() as temp_dir:
             # First download the video
             video_path = os.path.join(temp_dir, "video")
-            cookies_path = os.path.abspath("cookies.txt")
+
+            # Get path relative to this module's location
+            module_dir = os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            )
+            cookies_path = os.path.join(module_dir, "cookies.txt")
+            print(f"Module directory: {module_dir}")
             print(f"Using cookies from: {cookies_path}")
             if not os.path.exists(cookies_path):
                 print(f"Warning: Cookies file not found at {cookies_path}")
                 print(f"Current working directory: {os.getcwd()}")
-                print(f"Directory contents: {os.listdir('.')}")
+                print(f"Directory contents: {os.listdir(module_dir)}")
 
             ydl_opts = {
                 "format": "bestaudio/best",  # Try best audio format
@@ -184,7 +190,7 @@ class WhisperTranscriptProvider(TranscriptProvider):
                 "ignoreerrors": True,
                 "extract_audio": True,
                 "audio_format": "mp3",
-                "cookiefile": cookies_path,  # Use absolute path
+                "cookiefile": cookies_path,  # Use path relative to module
                 "postprocessors": [
                     {
                         "key": "FFmpegExtractAudio",
