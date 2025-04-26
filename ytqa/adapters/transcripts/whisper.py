@@ -7,15 +7,14 @@ import shutil
 import json
 
 import openai
-import yt_dlp
 
 from .base import TranscriptProvider
+from .piped import PipedTranscriptProvider
 from ...core.models import Segment
 from ...config import (
     TRANSCRIPT_CHUNK_DURATION,
     TRANSCRIPT_MAX_FILE_SIZE,
     CACHE_DIR,
-    COOKIES_PATH,
 )
 
 
@@ -31,6 +30,7 @@ class WhisperTranscriptProvider(TranscriptProvider):
             raise ValueError(
                 "OpenAI API key must be provided or set in OPENAI_API_KEY environment variable"
             )
+        self.piped_provider = PipedTranscriptProvider(cache_dir=cache_dir)
 
     def _merge_segments(self, segments: List[Segment]) -> List[Segment]:
         """Merge segments into chunks of approximately target duration."""
@@ -139,146 +139,8 @@ class WhisperTranscriptProvider(TranscriptProvider):
             return final_chunks
 
     def _download_audio(self, video_id: str) -> str:
-        """Download video audio in WAV format."""
-        # Check if we already have the WAV file
-        wav_path = self._get_cached_path(video_id, ".wav")
-        if os.path.exists(wav_path):
-            print(f"Using cached WAV file: {wav_path}")
-            return wav_path
-
-        # Check if we already have the MP3 file
-        mp3_path = self._get_cached_path(video_id, ".mp3")
-        if os.path.exists(mp3_path):
-            print(f"Using cached MP3 file: {mp3_path}")
-            # Convert MP3 to WAV
-            print("Converting cached MP3 to WAV...")
-            ffmpeg_cmd = [
-                "ffmpeg",
-                "-i",
-                mp3_path,
-                "-acodec",
-                "pcm_s16le",
-                "-ar",
-                "16000",
-                "-ac",
-                "1",
-                wav_path,
-            ]
-            subprocess.run(ffmpeg_cmd, capture_output=True, check=True)
-            return wav_path
-
-        url = f"https://www.youtube.com/watch?v={video_id}"
-
-        # Create a temporary directory for the download
-        with tempfile.TemporaryDirectory() as temp_dir:
-            # First download the video
-            video_path = os.path.join(temp_dir, "video")
-
-            # Use cookies path from config
-            print(f"Using cookies from: {COOKIES_PATH}")
-            if not os.path.exists(COOKIES_PATH):
-                print(f"Warning: Cookies file not found at {COOKIES_PATH}")
-
-            ydl_opts = {
-                "format": "bestaudio/best",  # Try best audio format
-                "outtmpl": video_path,
-                "quiet": False,
-                "no_warnings": False,
-                "verbose": True,
-                "ignoreerrors": True,
-                "extract_audio": True,
-                "audio_format": "mp3",
-                "cookiefile": COOKIES_PATH,
-                "postprocessors": [
-                    {
-                        "key": "FFmpegExtractAudio",
-                        "preferredcodec": "mp3",
-                        "preferredquality": "128",
-                    }
-                ],
-                "http_headers": {
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                    "Accept-Language": "en-us,en;q=0.5",
-                    "Accept-Encoding": "gzip, deflate",
-                    "Accept-Charset": "ISO-8859-1,utf-8;q=0.7,*;q=0.7",
-                },
-                "nocheckcertificate": True,
-            }
-
-            try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    print(f"Downloading video from {url}")
-
-                    # First get video info without downloading
-                    info = ydl.extract_info(url, download=False)
-                    if not info:
-                        raise RuntimeError("Failed to get video info")
-
-                    # Print available formats for debugging
-                    print("\nAvailable formats:")
-                    for f in info.get("formats", []):
-                        print(
-                            f"Format: {f.get('format_id')}, Ext: {f.get('ext')}, "
-                            f"Quality: {f.get('format_note')}, "
-                            f"Has audio: {f.get('acodec') != 'none'}, "
-                            f"Has video: {f.get('vcodec') != 'none'}"
-                        )
-
-                    # Now download
-                    info = ydl.extract_info(url, download=True)
-                    if not info:
-                        raise RuntimeError("Failed to download video")
-
-                    # Get the actual downloaded file path
-                    downloaded_file = f"{video_path}.mp3"
-                    if not os.path.exists(downloaded_file):
-                        # Try without extension
-                        downloaded_file = video_path
-                        if not os.path.exists(downloaded_file):
-                            raise RuntimeError(
-                                f"Downloaded file not found at {downloaded_file}"
-                            )
-
-                    print(f"Downloaded file: {downloaded_file}")
-                    print(f"File size: {os.path.getsize(downloaded_file)} bytes")
-
-                    # Cache the MP3 file
-                    shutil.copy2(downloaded_file, mp3_path)
-                    print(f"Cached MP3 file: {mp3_path}")
-
-                    # Now convert to WAV using FFmpeg
-                    print("Converting to WAV with FFmpeg...")
-                    ffmpeg_cmd = [
-                        "ffmpeg",
-                        "-i",
-                        mp3_path,  # Use cached MP3
-                        "-acodec",
-                        "pcm_s16le",  # WAV format
-                        "-ar",
-                        "16000",  # Sample rate
-                        "-ac",
-                        "1",  # Mono
-                        wav_path,
-                    ]
-
-                    result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
-                    if result.returncode != 0:
-                        print(f"FFmpeg error: {result.stderr}")
-                        raise RuntimeError("Failed to convert audio with FFmpeg")
-
-                    # Verify the WAV file
-                    if not os.path.exists(wav_path):
-                        raise RuntimeError("WAV file was not created")
-                    if os.path.getsize(wav_path) == 0:
-                        raise RuntimeError("WAV file is empty")
-
-                    print(f"Cached WAV file: {wav_path}")
-                    return wav_path
-
-            except Exception as e:
-                print(f"Error during download/processing: {str(e)}")
-                raise RuntimeError(f"Failed to download audio: {str(e)}")
+        """Download video audio using Piped API."""
+        return self.piped_provider._download_audio(video_id)
 
     def get_transcript(self, video_id: str) -> List[Segment]:
         # Check for cached transcript first

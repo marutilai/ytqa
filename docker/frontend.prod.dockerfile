@@ -1,39 +1,41 @@
-# Use Node.js LTS version
-FROM node:20-slim as builder
+# Build stage
+FROM node:20-slim AS builder
 
 # Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy frontend source code
-COPY frontend/ ./
+# Copy source code and config files
+COPY frontend/src ./src
+COPY frontend/index.html ./
+COPY frontend/vite.config.ts ./
+COPY frontend/tsconfig.json ./
+COPY frontend/tsconfig.node.json ./
+COPY frontend/postcss.config.js ./
+COPY frontend/tailwind.config.js ./
 
-# Copy cookies file for API requests
-COPY cookies.txt /app/cookies.txt
+# Set production port for the build
+ENV VITE_PORT=3000
 
 # Build the application
 RUN npm run build
 
 # Production stage
-FROM node:20-slim
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy built files
+COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copy built assets from builder stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/cookies.txt ./cookies.txt
+# Copy nginx configuration
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 
-# Install only production dependencies
-RUN npm install --production
-
-# Expose port 3000
+# Expose port
 EXPOSE 3000
 
-# Start the production server
-CMD ["npm", "run", "start"] 
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"] 

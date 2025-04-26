@@ -3,7 +3,7 @@ import os
 import json
 import tempfile
 
-from .youtube import YouTubeTranscriptProvider
+from .piped import PipedTranscriptProvider
 from .whisper import WhisperTranscriptProvider
 from .base import TranscriptProvider
 from ...core.models import Segment
@@ -50,9 +50,7 @@ class TranscriptFactory:
 
     def __init__(self, openai_api_key: Optional[str] = None, language: str = "en"):
         print(f"Initializing TranscriptFactory with cache_dir: {CACHE_DIR}")
-        self.youtube_provider = YouTubeTranscriptProvider(
-            language=language, cache_dir=CACHE_DIR
-        )
+        self.piped_provider = PipedTranscriptProvider(cache_dir=CACHE_DIR)
         self.whisper_provider = WhisperTranscriptProvider(
             api_key=openai_api_key, cache_dir=CACHE_DIR
         )
@@ -134,12 +132,10 @@ class TranscriptFactory:
 
         # If no cached transcript, get it from providers
         try:
-            print(f"Attempting to get transcript from YouTube for video {video_id}")
-            segments = self.youtube_provider.get_transcript(video_id)
-        except ValueError as e:
-            print(
-                f"YouTube transcript not available, falling back to Whisper: {str(e)}"
-            )
+            print(f"Attempting to get transcript using Piped for video {video_id}")
+            segments = self.piped_provider.get_transcript(video_id)
+        except Exception as e:
+            print(f"Piped transcript not available, falling back to Whisper: {str(e)}")
             segments = self.whisper_provider.get_transcript(video_id)
 
         # Merge segments into chunks

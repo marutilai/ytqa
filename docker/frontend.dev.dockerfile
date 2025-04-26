@@ -5,19 +5,22 @@ FROM node:20-slim
 WORKDIR /app
 
 # Copy package files
-COPY frontend/package*.json ./
+COPY frontend/package.json frontend/package-lock.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy frontend source code
-COPY frontend/ ./
+# Copy source code and config files
+COPY frontend/src ./src
+COPY frontend/index.html ./
+COPY frontend/vite.config.ts ./
+COPY frontend/tsconfig.json ./
+COPY frontend/tsconfig.node.json ./
+COPY frontend/postcss.config.js ./
+COPY frontend/tailwind.config.js ./
 
-# Copy cookies file for API requests
-COPY cookies.txt /app/cookies.txt
-
-# Expose port 3000
+# Expose port
 EXPOSE 3000
 
-# Start the development server
+# Start development server
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"] 

@@ -27,11 +27,13 @@ MIN_TOPIC_DURATION = 60 * 2  # Minimum duration for a topic in seconds
 CACHE_DIR = os.path.join(tempfile.gettempdir(), "ytqa_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# Cookies settings
-# Check environment variable first, then try Docker path, finally local path
-COOKIES_PATH = os.getenv(
-    "YTQA_COOKIES_PATH",
-    "/app/ytqa/cookies.txt"
-    if os.path.exists("/app/ytqa/cookies.txt")
-    else "cookies.txt",
-)
+# Piped API settings
+PIPED_INSTANCES = [
+    "https://pipedapi.kavin.rocks",  # Primary instance
+    "https://pipedapi-libre.kavin.rocks",  # Backup instance 1
+    "https://api.piped.projectsegfau.lt",  # Backup instance 2
+    "https://watchapi.whatever.social",  # Backup instance 3
+    "https://piped-api.garudalinux.org",  # Backup instance 4
+]
+PIPED_TIMEOUT = 30  # Increased timeout for Piped API requests in seconds
+PIPED_MAX_RETRIES = 3  # Maximum number of retries per instance

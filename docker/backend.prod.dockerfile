@@ -23,14 +23,8 @@ COPY pyproject.toml poetry.lock ./
 # Install dependencies without dev packages
 RUN poetry install --without dev --no-interaction --no-ansi
 
-# Create ytqa directory
-RUN mkdir -p /app/ytqa
-
 # Copy application code
 COPY ytqa ./ytqa
-
-# Copy cookies file to the correct location
-COPY cookies.txt /app/ytqa/cookies.txt
 
 # Create cache directory
 RUN mkdir -p /tmp/ytqa_cache
