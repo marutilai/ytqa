@@ -29,11 +29,22 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 
 # Piped API settings
 PIPED_INSTANCES = [
-    "https://pipedapi.kavin.rocks",  # Primary instance
-    "https://pipedapi-libre.kavin.rocks",  # Backup instance 1
-    "https://api.piped.projectsegfau.lt",  # Backup instance 2
-    "https://watchapi.whatever.social",  # Backup instance 3
-    "https://piped-api.garudalinux.org",  # Backup instance 4
+    "https://pipedapi.kavin.rocks",  # 🇺🇸, 🇮🇳, 🇳🇱, 🇨🇦, 🇬🇧, 🇫🇷 (Official)
+    "https://pipedapi.leptons.xyz",  # 🇦🇹
+    "https://pipedapi.nosebs.ru",  # 🇫🇮
+    "https://pipedapi-libre.kavin.rocks",  # 🇳🇱 (Official)
+    "https://piped-api.privacy.com.de",  # 🇩🇪
+    "https://pipedapi.adminforge.de",  # 🇩🇪
+    "https://api.piped.yt",  # 🇩🇪
+    "https://pipedapi.drgns.space",  # 🇺🇸
+    "https://piapi.ggtyler.dev",  # 🇺🇸
+    "https://pipedapi.owo.si",  # 🇩🇪
+    "https://pipedapi.ducks.party",  # 🇳🇱
+    "https://piped-api.codespace.cz",  # 🇨🇿
+    "https://pipedapi.reallyaweso.me",  # 🇩🇪
+    "https://api.piped.private.coffee",  # 🇦🇹
+    "https://pipedapi.darkness.services",  # 🇺🇸
+    "https://pipedapi.orangenet.cc",  # 🇸🇮
 ]
 PIPED_TIMEOUT = 30  # Increased timeout for Piped API requests in seconds
 PIPED_MAX_RETRIES = 3  # Maximum number of retries per instance
