@@ -72,4 +72,7 @@ ytqa_cache/
 .TemporaryItems
 .Trashes
 .VolumeIcon.icns
-.com.apple.timemachine.donotpresent 
+.com.apple.timemachine.donotpresent
+
+# Cookies
+cookies.txt 

@@ -21,6 +21,7 @@ mock = "^5.2.0"
 pytest-cov = "^6.1.1"
 fastapi = "^0.115.12"
 uvicorn = "^0.34.1"
+browser-cookie3 = "^0.20.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"

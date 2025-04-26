@@ -176,6 +176,7 @@ class WhisperTranscriptProvider(TranscriptProvider):
                 "ignoreerrors": True,
                 "extract_audio": True,
                 "audio_format": "mp3",
+                "cookiefile": "cookies.txt",  # Use cookies.txt file
                 "postprocessors": [
                     {
                         "key": "FFmpegExtractAudio",
