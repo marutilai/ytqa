@@ -36,8 +36,25 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null)
 
   const validateYouTubeUrl = (url: string) => {
-    const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})$/;
-    return pattern.test(url);
+    try {
+      const parsed = new URL(url);
+      if (
+        (parsed.hostname === "www.youtube.com" || parsed.hostname === "youtube.com") &&
+        parsed.pathname === "/watch"
+      ) {
+        const v = parsed.searchParams.get("v");
+        return v && v.length === 11;
+      }
+      if (
+        (parsed.hostname === "youtu.be" || parsed.hostname === "www.youtu.be") &&
+        parsed.pathname.length === 12 // "/<11-char-id>"
+      ) {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   };
 
   const handleProcessVideo = async () => {
