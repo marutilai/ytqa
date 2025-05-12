@@ -33,8 +33,9 @@ class Orchestrator:
         """Extract video ID from YouTube URL."""
         parsed = urlparse(url)
         if parsed.hostname in ["youtube.com", "www.youtube.com"]:
-            if parsed.path == "/watch":
-                return parse_qs(parsed.query)["v"][0]
+            qs = parse_qs(parsed.query)
+            if "v" in qs:
+                return qs["v"][0]
         elif parsed.hostname in ["youtu.be", "www.youtu.be"]:
             return parsed.path[1:]
         raise ValueError(f"Invalid YouTube URL: {url}")
